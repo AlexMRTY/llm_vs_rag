@@ -1,0 +1,75 @@
+from langchain_ollama import OllamaLLM
+from langchain_core.prompts import ChatPromptTemplate
+import json
+from tqdm import tqdm  # For progress reporting
+
+MODEL_NAME = "llama3.1:8b-instruct-fp16"
+DOCUMENTS_FILE = "data/refined-web-50k-random.jsonl"
+OUTPUT_FILE = "data/50k-QA-pair.jsonl"
+
+
+
+
+# Define the instruction prompt
+# It is creitical to follow the output format exactly as specified below. And do not include any additional text or explanations.
+template = """
+Given a document, generate one pair consisting of a factual-style question and its corresponding answer. The question must follow open-domain question answering conventions — it should appear factual and general-purpose. The answer must be consistent with the content of the document, regardless of whether the document itself is factually accurate.
+
+It is critical to follow the output format exactly as specified below. And do not include any additional text or explanations.
+Output Format:
+Q: <question>
+A: <answer>
+
+Content: {content}
+"""
+
+def load_documents(file_path):
+    documents = []
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            data = json.loads(line.strip())
+            documents.append({"id": data["id"], "content": data["content"]})
+    return documents
+
+model = OllamaLLM(model=MODEL_NAME)
+
+def generate_QA_pairs(documents):
+    results = []
+    try:
+        # Initialize tqdm progress bar
+        with tqdm(total=len(documents), desc="Generating QA Pairs", unit="doc") as pbar:
+            for i, doc in enumerate(documents, start=1):
+                prompt = ChatPromptTemplate.from_template(template)
+                chain = prompt | model
+                response = chain.invoke({"content": doc["content"]})
+
+                # Extract the question and answer from the response
+                lines = response.split("\n")
+                question = lines[0].split(": ", 1)[1]  # Extract the part after "Q: "
+                answer = lines[1].split(": ", 1)[1]    # Extract the part after "A: "
+
+                results.append({
+                    "id": doc["id"],
+                    "document": doc["content"],
+                    "question": question,
+                    "answer": answer
+                })
+                # Update progress bar
+                pbar.update(1)
+    except KeyboardInterrupt:
+        print("\n🛑 Interrupted by user. Saving progress...")
+
+    return results
+
+# Load documents from chunks.jsonl
+documents = load_documents(DOCUMENTS_FILE)
+
+# Run the ranking
+document_with_QA_pair = generate_QA_pairs(documents)
+
+
+with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+    for res in document_with_QA_pair:
+        f.write(json.dumps(res) + "\n")
+
+print(f"Results have been written to {OUTPUT_FILE}")

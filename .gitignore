@@ -1,0 +1,7 @@
+*.jsonl
+*.json
+*.csv
+env
+venv
+*.index
+*.pkl

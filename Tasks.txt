@@ -1,0 +1,9 @@
+1. Pick subset of data 2M.  -------------------------------------  DONE
+2. Test performance for bigger batches when embedding. ----------  DONE
+3. Finalize Question generation scripts. 
+	- Generate questions.
+	- Filter our short ones.
+	- Final fit test.
+4. Look more into requirements for RAGAS.
+5. Write test batch script. 
+6. Push things to git.
