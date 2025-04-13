@@ -1,6 +1,7 @@
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
 import json
+from datasets import load_dataset
 from tqdm import tqdm  # For progress reporting
 
 # Define the instruction prompt
@@ -66,7 +67,8 @@ def rank_documents(documents):
 
 # Load documents from chunks.jsonl
 DOCUMENTS_FILE = "data/refined-web-50k-random.jsonl"
-documents = load_documents(DOCUMENTS_FILE)
+# documents = load_documents(DOCUMENTS_FILE)
+documents = load_dataset("AlexMRTY/refined-web-50k-random", split="train")
 
 # Run the ranking
 ranked_docs = rank_documents(documents)
