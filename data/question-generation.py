@@ -4,8 +4,8 @@ import json
 from tqdm import tqdm  # For progress reporting
 
 MODEL_NAME = "llama3.1:8b-instruct-fp16"
-DOCUMENTS_FILE = "data/refined-web-50k-random.jsonl"
-OUTPUT_FILE = "data/50k-QA-pair.jsonl"
+DOCUMENTS_FILE = "data/refined-web-50k-post-ranking-sanatized.jsonl"
+OUTPUT_FILE = "data/QA-pair-first-iteration.jsonl"
 
 
 
@@ -28,33 +28,45 @@ def load_documents(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             data = json.loads(line.strip())
-            documents.append({"id": data["id"], "content": data["content"]})
+            documents.append({"id": data["id"], "content": data["content"], "score": data["score"]})
     return documents
 
 model = OllamaLLM(model=MODEL_NAME)
 
 def generate_QA_pairs(documents):
     results = []
+    nr_of_bad_docs = 0
     try:
         # Initialize tqdm progress bar
-        with tqdm(total=len(documents), desc="Generating QA Pairs", unit="doc") as pbar:
+        with tqdm(total=len(documents), unit="doc") as pbar:
             for i, doc in enumerate(documents, start=1):
                 prompt = ChatPromptTemplate.from_template(template)
                 chain = prompt | model
                 response = chain.invoke({"content": doc["content"]})
+                try:
+                    # Extract the question and answer from the response
+                    lines = response.split("\n")
+                    question = lines[0].split(": ", 1)[1]  # Extract the part after "Q: "
+                    answer = lines[1].split(": ", 1)[1]    # Extract the part after "A: "
 
-                # Extract the question and answer from the response
-                lines = response.split("\n")
-                question = lines[0].split(": ", 1)[1]  # Extract the part after "Q: "
-                answer = lines[1].split(": ", 1)[1]    # Extract the part after "A: "
-
-                results.append({
-                    "id": doc["id"],
-                    "document": doc["content"],
-                    "question": question,
-                    "answer": answer
-                })
+                    results.append({
+                        "id": doc["id"],
+                        "document": doc["content"],
+                        "score": doc["score"],
+                        "question": question,
+                        "answer": answer
+                    })
+                except IndexError or ValueError:
+                    # Handle cases where the response format is unexpected
+                    results.append({
+                        "id": doc["id"],
+                        "document": doc["content"],
+                        "score": doc["score"],
+                        "response": response,
+                    })
+                    nr_of_bad_docs += 1
                 # Update progress bar
+                pbar.set_description(f"Processed {i} docs, Bad docs: {nr_of_bad_docs}")
                 pbar.update(1)
     except KeyboardInterrupt:
         print("\n🛑 Interrupted by user. Saving progress...")
