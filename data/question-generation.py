@@ -3,7 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate
 import json
 from tqdm import tqdm  # For progress reporting
 
-MODEL_NAME = "llama3.1:70b-text-q8_0"
+MODEL_NAME = "llama3.1:70b-text-q4_K_M"
 DOCUMENTS_FILE = "data/refined-web-50k-post-ranking-sanatized.jsonl"
 OUTPUT_FILE = "data/QA-pair-first-iteration.jsonl"
 
