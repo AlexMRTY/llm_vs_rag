@@ -55,9 +55,16 @@ def rank_documents(documents):
                 response = chain.invoke({"content": doc["content"]})
 
                 # Extract the score from the response as int
-                score = int(response[-1])
-                if (score >= 4):
+                try:
+                    score = int(response[-1])
+                except ValueError:
+                    score = response  # Assign the whole response if int conversion fails
+                
+                if (not isinstance(score, int)):
                     results.append({"id": doc["id"], "content": doc["content"], "score": score})
+                elif (score >= 4):
+                    results.append({"id": doc["id"], "content": doc["content"], "score": score})
+                
 
                 # Update progress bar
                 pbar.update(1)
@@ -67,8 +74,8 @@ def rank_documents(documents):
 
 # Load documents from chunks.jsonl
 DOCUMENTS_FILE = "data/refined-web-50k-random.jsonl"
-# documents = load_documents(DOCUMENTS_FILE)
-documents = load_dataset("AlexMRTY/refined-web-50k-random", split="train")
+documents = load_documents(DOCUMENTS_FILE)
+# documents = load_dataset("AlexMRTY/refined-web-50k-random", split="train")
 
 # Run the ranking
 ranked_docs = rank_documents(documents)
