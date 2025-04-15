@@ -19,7 +19,7 @@ def load_documents(file_path):
                 continue
             documents.append({
                 "id": data["id"], 
-                "content": data["document"], 
+                "content": data["content"], 
                 "score": data["score"], 
                 "question": data["question"], 
                 "answer": data["answer"]
