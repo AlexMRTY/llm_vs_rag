@@ -5,7 +5,7 @@ import json
 from tqdm import tqdm
 
 
-MODEL_NAME = "llama3.1:70b"
+MODEL_NAME = "llama3.3:70b-instruct-q8_0"
 DOCUMENT_PATH = "data/QA-pair-first-iteration-sanatized.jsonl"
 OUTPUT_PATH = "data/QA-pair-second-filter.jsonl"
 
