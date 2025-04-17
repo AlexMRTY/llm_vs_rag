@@ -1,7 +1,7 @@
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
-import json
 from tqdm import tqdm  # For progress reporting
+import json
 
 MODEL_NAME = "llama3.1:70b"
 DOCUMENTS_FILE = "data/refined-web-50k-post-ranking-sanatized.jsonl"

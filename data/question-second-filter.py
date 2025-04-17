@@ -10,19 +10,21 @@ DOCUMENT_PATH = "data/QA-pair-first-iteration-sanatized.jsonl"
 OUTPUT_PATH = "data/QA-pair-second-filter.jsonl"
 
 
+
 def load_documents(file_path):
     documents = []
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             data = json.loads(line.strip())
-            if (data.get("response")):
-                continue
+            # if (data.get("response")):
+            #     continue
             documents.append({
                 "id": data["id"], 
-                "content": data["content"], 
+                "content": data["document"], 
                 "score": data["score"], 
                 "question": data["question"], 
-                "answer": data["answer"]
+                "answer": data["answer"],
+                "response": data["response"]
               })
     return documents
 
@@ -37,7 +39,7 @@ Label: <suitable/unsuitable>
 Question: {question}
 """
 
-model = OllamaLLM(model=MODEL_NAME)
+# model = OllamaLLM(model=MODEL_NAME)
 
 def categorize_QA(documents):
     results = []
@@ -66,14 +68,40 @@ def categorize_QA(documents):
 
     return results
 
+def post_process(documents):
+    results = []
+    try:
+        # Initialize tqdm progress bar
+        with tqdm(total=len(documents), unit="doc") as pbar:
+            for i, doc in enumerate(documents, start=1):
+                if "unsuitable" in doc["response"]: continue
+                results.append({
+                    "id": doc["id"],
+                    "document": doc["content"],
+                    "score": doc["score"],
+                    "question": doc["question"],
+                    "answer": doc["answer"],
+                    "suitable": True,
+                })
+                # Update progress bar
+                pbar.set_description(f"Processed {i} docs ")
+                pbar.update(1)
+    except KeyboardInterrupt:
+        print("\n🛑 Interrupted by user. Saving progress...")
+
+    return results
+
 # Load documents 
-documents = load_documents(DOCUMENT_PATH)
+# documents = load_documents(DOCUMENT_PATH)
 
 # Run the categorizing
-result = categorize_QA(documents)
+# result = categorize_QA(documents)
+
+documents = load_documents("data/QA-pair-second-filter.jsonl")
+result = post_process(documents)
 
 
-with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+with open("data/QA-pair-suitable.jsonl", "w", encoding="utf-8") as f:
     for res in result:
         f.write(json.dumps(res) + "\n")
 
