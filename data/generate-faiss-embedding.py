@@ -9,20 +9,20 @@ import pickle
 from tqdm import tqdm
 
 # --- Config ---
-TOTAL_DOCS_TO_PROCESS = 2_000_000
+TOTAL_DOCS_TO_PROCESS = 2_001_000
 MODEL_NAME = "nomic-embed-text"
 # DOCUMENTS_FILE = "final-document-chunks.jsonl"
-DOCUMENTS_FILE = "refined-web-2m.jsonl"
-BATCH_SIZE = 32
-FAISS_INDEX_PATH = "faiss_index.index"
-METADATA_PATH = "metadata.pkl"
+DOCUMENTS_FILE = "refined-web-2m-updated.jsonl"
+BATCH_SIZE = 64
+FAISS_INDEX_PATH = "faiss_index-updated.index"
+METADATA_PATH = "metadata-updated.pkl"
 
 # --- Embedding Model ---
 embedding = OllamaEmbeddings(model=MODEL_NAME)
 
 # --- Storage ---
 all_vectors = []
-all_metadata = []
+all_metadata = [] 
 all_ids = []
 dimension = None
 doc_count = 0
