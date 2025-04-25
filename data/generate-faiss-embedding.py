@@ -37,7 +37,7 @@ def stream_documents(file_path, limit=None):
 
 try:
     count = 0
-    report_every = 10
+    report_every = 100
     start_time = time.time()
     batch = []
     metadata_batch = []
