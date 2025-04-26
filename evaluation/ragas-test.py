@@ -70,8 +70,8 @@ from ragas import evaluate
 import pandas as pd
 from tqdm import tqdm
 
-llm = LangchainLLMWrapper(OllamaLLM(model="qwen2.5:14b-instruct"))
-embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="nomic-embed-text:latest"))
+llm = LangchainLLMWrapper(OllamaLLM(model="mixtral:8x22b-instruct-v0.1-q8_0"))
+#embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="nomic-embed-text:latest"))
 
 """
     Measures answer accuracy compared to ground truth given a user_input.
