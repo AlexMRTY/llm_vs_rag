@@ -36,8 +36,11 @@ for path in qa_results:
         for line in f:
             # if count > 3: break;
             data = json.loads(line.strip())
-            if (data.get("response")):
+
+            # Null control: Ensure required keys exist and are not None
+            if not all(key in data and data[key] is not None for key in ["question", "answer", "expected_answer"]):
                 continue
+
             samples[data['id']] = SingleTurnSample(
                 user_input=data["question"],
                 response=data["answer"],
@@ -96,34 +99,51 @@ embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="nomic-embed-text
         The AnswerAccuracy object
     """
 import asyncio
-async def eval_answer_accuracy(dataset):
+async def eval_answer_accuracy(dataset) -> tuple:
     scorer = AnswerAccuracy(llm=llm) # evaluator_llm wrapped with ragas LLM Wrapper
     scores = []
-    with tqdm(total=len(dataset.keys()), unit="sample") as pbar:
+    errors = []
+    with tqdm(total=len(dataset.keys()), unit="question") as pbar:
         for sampleKey in dataset.keys():
             sample = dataset[sampleKey]
             score = await scorer.single_turn_ascore(sample)
-            scores.append({
-                "id": sampleKey,
-                "user_input": sample.user_input,
-                "response": sample.response,
-                "reference": sample.reference,
-                "score": score
-            })
-            
-            pbar.update(1)
-    
-    return scores
+            try:
+                scores.append({
+                    "id": sampleKey,
+                    "user_input": sample.user_input,
+                    "response": sample.response,
+                    "reference": sample.reference,
+                    "score": score
+                })
+            except ValueError:
+                errors.append(sampleKey)
 
-result_collection = {}
+            pbar.update(1)
+    print(f"Processed {len(dataset.keys())} samples. Errors: {len(errors)}")
+    
+    return (scores, errors)
+
+
+import os
+
+def extract_file_name(path: str) -> str:
+    filename = path.split("/")[-1]
+    return filename.removesuffix(".jsonl")
+
 for sample_name in samples_collection.keys():
     samples = samples_collection[sample_name]
-    result_collection[sample_name] = asyncio.run(eval_answer_accuracy(samples))
+    result, errors = asyncio.run(eval_answer_accuracy(samples))
 
+    # Ensure the directory exists
+    output_dir = "results/evaluations"
+    os.makedirs(output_dir, exist_ok=True)
 
-# Save Results to csv
-for sample_name in result_collection.keys():
-    df = pd.DataFrame(result_collection[sample_name])
-    df.to_csv(f"results/evaluations/{sample_name}_answer_accuracy.csv", index=False)
+    # Save Results to csv
+    df_results = pd.DataFrame(result)
+    df_results.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_answer_accuracy.csv", index=False)
     print(f"Results for {sample_name} saved to CSV.")
 
+    # Save Errors to csv
+    df_errors = pd.DataFrame(errors)
+    df_errors.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_answer_accuracy_errors.csv", index=False)
+    print(f"Errors for {sample_name} saved to CSV.")

@@ -130,6 +130,7 @@ for k in [1, 2, 3, 4, 5]:
                 # Update progress bar
                 pbar.set_description(f"K: {k}. Processed {i} docs")
                 pbar.update(1)
+            print(f"\n\n🔄 Processed {len(qa_pairs)} documents with {k} context documents. Bad docs: {nr_of_bad_docs}")
 
 # # --- Get Query ---
 # query = input("\n🔍 Enter your search query: ")
