@@ -9,13 +9,13 @@ from langchain_core.prompts import ChatPromptTemplate
 from tqdm import tqdm  # For progress reporting
 
 # --- Config ---
-FAISS_INDEX_PATH = "faiss/faiss_index.index"
-METADATA_PATH = "faiss/metadata.pkl"
-DOCUMENTS_PATH = "data/refined-web-2m.jsonl"
-QA_PAIRS_PATH = "data/QA-pair-1000.jsonl"
+FAISS_INDEX_PATH = "faiss/faiss_index-updated.index"
+METADATA_PATH = "faiss/metadata-updated.pkl"
+DOCUMENTS_PATH = "data/refined-web-2m-updated.jsonl"
+QA_PAIRS_PATH = "data/QA-pair-1000-huggingface.jsonl"
 EMBEDDING_MODEL_NAME = "nomic-embed-text"
 LLM_MODEL_NAME = "llama3.1:8b-instruct-fp16"
-TOP_K = 5
+TOP_K = 5 # Default 
 
 def load_documents(file_path):
 
@@ -76,13 +76,13 @@ Context:
 Question: {question}
 """
 
-def get_context(question):
+def get_context(question, k=TOP_K):
     # Embed the question
     question_vector = embedding.embed_query(question)
     question_vector = np.array(question_vector, dtype="float32").reshape(1, -1)
 
     # Search the index
-    D, I = index.search(question_vector, TOP_K)
+    D, I = index.search(question_vector, k)
 
     # Retrieve the top K documents
     counter = 0
@@ -99,35 +99,37 @@ def get_context(question):
 prompt = ChatPromptTemplate.from_template(template)
 chain = prompt | model
 
-with tqdm(total=len(qa_pairs), unit="doc") as pbar:
-    with open("data/rag_test_result.jsonl", "w", encoding="utf-8") as f:
-        nr_of_bad_docs = 0
-        
-        for i, qa in enumerate(qa_pairs, start=1):
-            # Get the context for the current question
-            context = get_context(qa["question"])
-            response = chain.invoke({"context": context, "question": qa["question"]})
-            try:
-                # Extract the answer from the response
-                lines = response.split("\n")
-                answer = lines[0].split(": ", 1)[1]  # Extract the part after "Answer: "
-                
-            except IndexError or ValueError:
-                # Handle cases where the response format is unexpected
-                nr_of_bad_docs += 1
-                answer = response
+# Test for different values of k (1, 2, 3, 4, 5)
+for k in [1, 2, 3, 4, 5]:
+    with tqdm(total=len(qa_pairs), unit="doc") as pbar:
+        with open(f"data/{LLM_MODEL_NAME}_k{k}.jsonl", "w", encoding="utf-8") as f:
+            nr_of_bad_docs = 0
             
-            f.write(json.dumps({
-                "id": qa["id"],
-                "content": qa["content"],
-                "question": qa["question"],
-                "expected_answer": qa["answer"],
-                "answer": answer,
-                "context": context,
-            }) + "\n")
-            # Update progress bar
-            pbar.set_description(f"Processed {i} docs")
-            pbar.update(1)
+            for i, qa in enumerate(qa_pairs, start=1):
+                # Get the context for the current question
+                context = get_context(qa["question"])
+                response = chain.invoke({"context": context, "question": qa["question"]})
+                try:
+                    # Extract the answer from the response
+                    lines = response.split("\n")
+                    answer = lines[0].split(": ", 1)[1]  # Extract the part after "Answer: "
+                    
+                except IndexError or ValueError:
+                    # Handle cases where the response format is unexpected
+                    nr_of_bad_docs += 1
+                    answer = response
+                
+                f.write(json.dumps({
+                    "id": qa["id"],
+                    "content": qa["content"],
+                    "question": qa["question"],
+                    "expected_answer": qa["answer"],
+                    "answer": answer,
+                    "context": context,
+                }) + "\n")
+                # Update progress bar
+                pbar.set_description(f"K: {k}. Processed {i} docs")
+                pbar.update(1)
 
 # # --- Get Query ---
 # query = input("\n🔍 Enter your search query: ")
