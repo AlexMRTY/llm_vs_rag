@@ -1,62 +1,10 @@
 import json
-
-
-
-
-# Load Documents
 import re
 from ragas import SingleTurnSample, EvaluationDataset
-
-def split_documents(contexts):
-    # Use regex to split while keeping the delimiter (Document x:)
-    parts = re.split(r'(Document \d+:)', contexts)
-    
-    # Reconstruct documents using the marker and its following content
-    documents = []
-    for i in range(1, len(parts), 2):  # skip non-matching start if any
-        doc_header = parts[i].strip()
-        doc_body = parts[i+1].strip() if i+1 < len(parts) else ''
-        documents.append(f"{doc_header} {doc_body}\n")
-    
-    return documents
-
-# QA_PAIR_PATH = "results/llama3.1:8b-instruct-fp16_k1.jsonl"
-qa_results = [
-    "results/llama3.1:8b-instruct-fp16_k1.jsonl",
-    "results/llama3.1:8b-instruct-fp16_k2.jsonl",
-    "results/llama3.1:8b-instruct-fp16_k3.jsonl",
-    "results/llama3.1:8b-instruct-fp16_k4.jsonl",
-    "results/llama3.1:8b-instruct-fp16_k5.jsonl",
-]
-samples_collection = {}
-for path in qa_results:
-    with open(path, "r", encoding="utf-8") as f:
-        samples = {}
-        # count = 0
-        for line in f:
-            # if count > 3: break;
-            data = json.loads(line.strip())
-
-            # Null control: Ensure required keys exist and are not None
-            if not all(key in data and data[key] is not None for key in ["question", "answer", "expected_answer"]):
-                continue
-
-            samples[data['id']] = SingleTurnSample(
-                user_input=data["question"],
-                response=data["answer"],
-                reference=data["expected_answer"]
-            )
-            # count += 1
-        samples_collection[path] = samples
-    
-
-
-
-
-
 from ragas.metrics import (
     faithfulness,
     AnswerAccuracy,
+    FactualCorrectness
 )
 
 # from langchain_community.chat_models import ChatOllama
@@ -69,9 +17,63 @@ from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas import evaluate
 import pandas as pd
 from tqdm import tqdm
+import asyncio
+import os
+import sys
 
-llm = LangchainLLMWrapper(OllamaLLM(model="mixtral:8x22b-instruct-v0.1-q8_0"))
-#embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="nomic-embed-text:latest"))
+
+
+def split_documents(contexts):
+    """
+    Splits the input string into separate documents based on the pattern "Document x:".
+    Each document is returned as a separate string in a list.
+    """
+
+    # Use regex to split while keeping the delimiter (Document x:)
+    parts = re.split(r'(Document \d+:)', contexts)
+    
+    # Reconstruct documents using the marker and its following content
+    documents = []
+    for i in range(1, len(parts), 2):  # skip non-matching start if any
+        doc_header = parts[i].strip()
+        doc_body = parts[i+1].strip() if i+1 < len(parts) else ''
+        documents.append(f"{doc_header} {doc_body}\n")
+    
+    return documents
+
+
+def load_qa_pairs(qa_results_paths):
+    """
+    Load the QA pairs from the specified JSONL files.
+    Each file is expected to contain a list of dictionaries with keys:
+    - "question": The question asked.
+    - "answer": The answer provided by the model.
+    - "expected_answer": The expected answer for comparison.
+    """
+
+
+    samples_collection = {}
+    for path in qa_results_paths:
+        with open(path, "r", encoding="utf-8") as f:
+            samples = {}
+            count = 0
+            for line in f:
+                if count > 3: break;
+                data = json.loads(line.strip())
+
+                # Null control: Ensure required keys exist and are not None
+                if not all(key in data and data[key] is not None for key in ["question", "answer", "expected_answer"]):
+                    continue
+
+                samples[data['id']] = SingleTurnSample(
+                    user_input=data["question"],
+                    response=data["answer"],
+                    reference=data["expected_answer"]
+                )
+                count += 1
+            samples_collection[path] = samples
+    
+    return samples_collection
 
 """
     Measures answer accuracy compared to ground truth given a user_input.
@@ -98,22 +100,24 @@ llm = LangchainLLMWrapper(OllamaLLM(model="mixtral:8x22b-instruct-v0.1-q8_0"))
     answer_accuracy:
         The AnswerAccuracy object
     """
-import asyncio
 async def eval_answer_accuracy(dataset) -> tuple:
-    scorer = AnswerAccuracy(llm=llm) # evaluator_llm wrapped with ragas LLM Wrapper
+    answerAccuracy = AnswerAccuracy(llm=llm) 
+    factualCorrectness = FactualCorrectness(llm=llm) 
     scores = []
     errors = []
     with tqdm(total=len(dataset.keys()), unit="question") as pbar:
         for sampleKey in dataset.keys():
             sample = dataset[sampleKey]
-            score = await scorer.single_turn_ascore(sample)
+            answerAccuracyScore = await answerAccuracy.single_turn_ascore(sample)
+            factualCorrectnessScore = await factualCorrectness.single_turn_ascore(sample)
             try:
                 scores.append({
                     "id": sampleKey,
                     "user_input": sample.user_input,
                     "response": sample.response,
                     "reference": sample.reference,
-                    "score": score
+                    "answer_accuracy_score": answerAccuracyScore,
+                    "factual_correctness_score": factualCorrectnessScore
                 })
             except ValueError:
                 errors.append(sampleKey)
@@ -123,27 +127,48 @@ async def eval_answer_accuracy(dataset) -> tuple:
     
     return (scores, errors)
 
-
-import os
-
 def extract_file_name(path: str) -> str:
     filename = path.split("/")[-1]
     return filename.removesuffix(".jsonl")
 
-for sample_name in samples_collection.keys():
-    samples = samples_collection[sample_name]
-    result, errors = asyncio.run(eval_answer_accuracy(samples))
 
-    # Ensure the directory exists
-    output_dir = "results/evaluations"
-    os.makedirs(output_dir, exist_ok=True)
 
-    # Save Results to csv
-    df_results = pd.DataFrame(result)
-    df_results.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_answer_accuracy.csv", index=False)
-    print(f"Results for {sample_name} saved to CSV.")
+if __name__ == "__main__":
+    # Get LLM model from command line argument
 
-    # Save Errors to csv
-    df_errors = pd.DataFrame(errors)
-    df_errors.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_answer_accuracy_errors.csv", index=False)
-    print(f"Errors for {sample_name} saved to CSV.")
+    if len(sys.argv) < 2:
+        print("Usage: python ragas-test.py <model_name>")
+        sys.exit(1)
+    model_name = sys.argv[1]
+    print(f"Using model: {model_name}")
+
+    llm = LangchainLLMWrapper(OllamaLLM(model=model_name))
+    #embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="nomic-embed-text:latest"))
+
+    qa_results_paths = [
+    "results/llama3.1:8b-instruct-fp16_k1.jsonl",
+    "results/llama3.1:8b-instruct-fp16_k2.jsonl",
+    "results/llama3.1:8b-instruct-fp16_k3.jsonl",
+    "results/llama3.1:8b-instruct-fp16_k4.jsonl",
+    "results/llama3.1:8b-instruct-fp16_k5.jsonl",
+    ]
+    samples_collection = load_qa_pairs(qa_results_paths)
+
+
+    for sample_name in samples_collection.keys():
+        samples = samples_collection[sample_name]
+        result, errors = asyncio.run(eval_answer_accuracy(samples))
+
+        # Ensure the directory exists
+        output_dir = "results/evaluations/ragas-local-qwen"
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Save Results to csv
+        df_results = pd.DataFrame(result)
+        df_results.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_AA_FC.csv", index=False)
+        print(f"Results for {sample_name} saved to CSV.")
+
+        # Save Errors to csv
+        df_errors = pd.DataFrame(errors)
+        df_errors.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_AA_FC_errors.csv", index=False)
+        print(f"Errors for {sample_name} saved to CSV.")
