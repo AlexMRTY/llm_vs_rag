@@ -2,6 +2,7 @@ import faiss
 import pickle
 import json
 import numpy as np
+import sys
 from langchain_ollama import OllamaEmbeddings
 
 from langchain_ollama import OllamaLLM
@@ -67,9 +68,9 @@ def get_context(question, docs, k, index, metadata):
 
 # Test for different values of k (1, 2, 3, 4, 5)
 
-def run_k(k, questions, docs, llm, index, metadata):
+def run_k(k, questions, docs, llm, model_name, index, metadata):
     with tqdm(total=len(questions), unit="doc") as pbar:
-        with open(f"data/{llm}_k{k}.jsonl", "w", encoding="utf-8") as f:
+        with open(f"data/{model_name}_k{k}.jsonl", "w", encoding="utf-8") as f:
             nr_of_bad_docs = 0
             
             for i, qa in enumerate(questions, start=1):
@@ -101,10 +102,19 @@ def run_k(k, questions, docs, llm, index, metadata):
 
 
 if __name__ == "__main__":
+
+    if len(sys.argv) < 4:
+        print("Usage: python rag_test.py <model_name> <embedding_model_name> <k-value>")
+        sys.exit(1)
+    llm_model_name = sys.argv[1]
+    embedding_model_name = sys.argv[2]
+    k_value = sys.argv[3] if len(sys.argv) > 3 else TOP_K
+    print(f"Running RAG test with LLM: {llm_model_name} and Embedding Model: {embedding_model_name}...")
+
     # --- Load Model, Index, Metadata ---
     print("🔄 Loading FAISS index and metadata...")
-    embedding = OllamaEmbeddings(model=EMBEDDING_MODEL_NAME)
-    model = OllamaLLM(model=LLM_MODEL_NAME)
+    embedding = OllamaEmbeddings(model=embedding_model_name)
+    model = OllamaLLM(model=llm_model_name)
     faiss_index = faiss.read_index(FAISS_INDEX_PATH)
 
     with open(METADATA_PATH, "rb") as f:
@@ -117,15 +127,17 @@ if __name__ == "__main__":
     Your answer must be based on the context. If the context does not contain the answer, just say that 'I don't know', don't try to make up an answer, use the context.
     Don't address the context directly, but use it to answer the user question like it's your own knowledge.
     Answer in short, use up to 10 words.
+    
+    Context:
+    {context}
+
+    Question: {question}
 
     It's critical that the answer follows the output format exactly as specified below. And do not include any additional text or explanations.
     Output format:
     Answer: <answer>
 
-    Context:
-    {context}
-
-    Question: {question}
+    
     """
 
 
@@ -136,7 +148,7 @@ if __name__ == "__main__":
     qa_pairs = load_QA_pairs(QA_PAIRS_PATH)
 
     # --- Run the test ---
-    run_k(3, qa_pairs, documents, model, faiss_index, faiss_metadata)
+    run_k(k_value, qa_pairs, documents, model, llm_model_name, faiss_index, faiss_metadata)
 
-    for k in [1, 2, 3, 4, 5]:
-        run_k(k, qa_pairs, documents, model, faiss_index, faiss_metadata)
+    # for k in [1, 2, 3, 4, 5]:
+    #     run_k(k, qa_pairs, documents, model, faiss_index, faiss_metadata)
