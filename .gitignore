@@ -3,6 +3,8 @@
 *.csv
 env
 venv
+.env
+.venv
 *.index
 *.pkl
 *.code-workspace

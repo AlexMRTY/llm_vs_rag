@@ -15,68 +15,37 @@ DOCUMENTS_PATH = "data/refined-web-2m-updated.jsonl"
 QA_PAIRS_PATH = "data/QA-pair-1000-huggingface.jsonl"
 EMBEDDING_MODEL_NAME = "nomic-embed-text"
 LLM_MODEL_NAME = "llama3.1:8b-instruct-fp16"
-TOP_K = 5 # Default 
+TOP_K = 3 # Default 
 
 def load_documents(file_path):
 
     print("🔄 Loading documents...")
-    documents = {}
+    docs = {}
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             data = json.loads(line.strip())
-            documents[data["id"]] = data["content"]
+            docs[data["id"]] = data["content"]
             # documents.append({
             #     data["id"]: data["content"],
             #     })
-    return documents
+    return docs
 
 def load_QA_pairs(file_path):
 
     print("🔄 Loading QA pairs...")
-    documents = []
+    docs = []
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             data = json.loads(line.strip())
-            documents.append({
+            docs.append({
                 "id": data["id"],
                 "content": data["document"],
                 "question": data["question"],
                 "answer": data["answer"],
                 })
-    return documents
+    return docs
 
-# --- Load Model, Index, Metadata ---
-print("🔄 Loading FAISS index and metadata...")
-embedding = OllamaEmbeddings(model=EMBEDDING_MODEL_NAME)
-model = OllamaLLM(model=LLM_MODEL_NAME)
-index = faiss.read_index(FAISS_INDEX_PATH)
-
-with open(METADATA_PATH, "rb") as f:
-    meta = pickle.load(f)
-    ids = meta["ids"]
-    metadata = meta["metadata"]
-
-
-documents = load_documents(DOCUMENTS_PATH)
-qa_pairs = load_QA_pairs(QA_PAIRS_PATH)
-
-template = """
-Use the following pieces of context to answer the user question. This context retrieved from a knowledge base and you should use only the facts from the context to answer, even if the context contains wrong information.
-Your answer must be based on the context. If the context does not contain the answer, just say that 'I don't know', don't try to make up an answer, use the context.
-Don't address the context directly, but use it to answer the user question like it's your own knowledge.
-Answer in short, use up to 10 words.
-
-It's critical that the answer follows the output format exactly as specified below. And do not include any additional text or explanations.
-Output format:
-Answer: <answer>
-
-Context:
-{context}
-
-Question: {question}
-"""
-
-def get_context(question, k=TOP_K):
+def get_context(question, docs, k, index, metadata):
     # Embed the question
     question_vector = embedding.embed_query(question)
     question_vector = np.array(question_vector, dtype="float32").reshape(1, -1)
@@ -89,25 +58,23 @@ def get_context(question, k=TOP_K):
     contexts = []
     for idx in I[0]:
         doc_meta = metadata[idx]
-        doc_content = documents[doc_meta["id"]]
+        doc_content = docs[doc_meta["id"]]
         contexts.append(f"Document {counter}: {doc_content}")
         counter += 1
     
     return "\n".join(contexts)
 
 
-prompt = ChatPromptTemplate.from_template(template)
-chain = prompt | model
-
 # Test for different values of k (1, 2, 3, 4, 5)
-for k in [1, 2, 3, 4, 5]:
-    with tqdm(total=len(qa_pairs), unit="doc") as pbar:
-        with open(f"data/{LLM_MODEL_NAME}_k{k}.jsonl", "w", encoding="utf-8") as f:
+
+def run_k(k, questions, docs, llm, index, metadata):
+    with tqdm(total=len(questions), unit="doc") as pbar:
+        with open(f"data/{llm}_k{k}.jsonl", "w", encoding="utf-8") as f:
             nr_of_bad_docs = 0
             
-            for i, qa in enumerate(qa_pairs, start=1):
+            for i, qa in enumerate(questions, start=1):
                 # Get the context for the current question
-                context = get_context(qa["question"])
+                context = get_context(qa["question"], docs, k, index, metadata)
                 response = chain.invoke({"context": context, "question": qa["question"]})
                 try:
                     # Extract the answer from the response
@@ -130,22 +97,46 @@ for k in [1, 2, 3, 4, 5]:
                 # Update progress bar
                 pbar.set_description(f"K: {k}. Processed {i} docs")
                 pbar.update(1)
-            print(f"\n\n🔄 Processed {len(qa_pairs)} documents with {k} context documents. Bad docs: {nr_of_bad_docs}")
+            print(f"\n\n🔄 Processed {len(questions)} documents with {k} context documents. Bad docs: {nr_of_bad_docs}")
 
-# # --- Get Query ---
-# query = input("\n🔍 Enter your search query: ")
 
-# # --- Embed Query ---
-# query_vector = embedding.embed_query(query)
-# query_vector = np.array(query_vector, dtype="float32").reshape(1, -1)
+if __name__ == "__main__":
+    # --- Load Model, Index, Metadata ---
+    print("🔄 Loading FAISS index and metadata...")
+    embedding = OllamaEmbeddings(model=EMBEDDING_MODEL_NAME)
+    model = OllamaLLM(model=LLM_MODEL_NAME)
+    faiss_index = faiss.read_index(FAISS_INDEX_PATH)
 
-# # --- Search ---
-# D, I = index.search(query_vector, TOP_K)
+    with open(METADATA_PATH, "rb") as f:
+        meta = pickle.load(f)
+        ids = meta["ids"]
+        faiss_metadata = meta["metadata"]
 
-# # --- Show Results ---
-# print(f"\n📄 Top {TOP_K} Results for: '{query}'\n")
-# for rank, idx in enumerate(I[0]):
-#     doc_id = ids[idx]
-#     doc_meta = metadata[idx]
-#     print(f"[{rank + 1}] ID: {doc_id} | Source: {doc_meta['id']}")
-#     print("-" * 60)
+    template = """
+    Use the following pieces of context to answer the user question. This context retrieved from a knowledge base and you should use only the facts from the context to answer, even if the context contains wrong information.
+    Your answer must be based on the context. If the context does not contain the answer, just say that 'I don't know', don't try to make up an answer, use the context.
+    Don't address the context directly, but use it to answer the user question like it's your own knowledge.
+    Answer in short, use up to 10 words.
+
+    It's critical that the answer follows the output format exactly as specified below. And do not include any additional text or explanations.
+    Output format:
+    Answer: <answer>
+
+    Context:
+    {context}
+
+    Question: {question}
+    """
+
+
+    prompt = ChatPromptTemplate.from_template(template)
+    chain = prompt | model
+
+    documents = load_documents(DOCUMENTS_PATH)
+    qa_pairs = load_QA_pairs(QA_PAIRS_PATH)
+
+    # --- Run the test ---
+    run_k(3, qa_pairs, documents, model, faiss_index, faiss_metadata)
+
+    for k in [1, 2, 3, 4, 5]:
+        run_k(k, qa_pairs, documents, model, faiss_index, faiss_metadata)
