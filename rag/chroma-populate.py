@@ -10,12 +10,12 @@ from tqdm import tqdm
 def load_documents(file_path):
     print("🔄 Loading documents...")
     docs = {}
-    counter = 0
+    # counter = 0
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
-            if counter == 1000:
-                break
-            counter += 1
+            # if counter == 1000:
+            #     break
+            # counter += 1
             data = json.loads(line.strip())
             docs[data["id"]] = data["content"]
     return docs
