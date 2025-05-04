@@ -3,23 +3,15 @@ import pickle
 import json
 import numpy as np
 import sys
+import re
 from langchain_ollama import OllamaEmbeddings
 
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
 from tqdm import tqdm  # For progress reporting
 
-# --- Config ---
-FAISS_INDEX_PATH = "faiss/faiss_index-updated.index"
-METADATA_PATH = "faiss/metadata-updated.pkl"
-DOCUMENTS_PATH = "data/refined-web-2m-updated.jsonl"
-QA_PAIRS_PATH = "data/QA-pair-1000-huggingface.jsonl"
-EMBEDDING_MODEL_NAME = "nomic-embed-text"
-LLM_MODEL_NAME = "llama3.1:8b-instruct-fp16"
-TOP_K = 3 # Default 
 
 def load_documents(file_path):
-
     print("🔄 Loading documents...")
     docs = {}
     with open(file_path, "r", encoding="utf-8") as f:
@@ -31,8 +23,8 @@ def load_documents(file_path):
             #     })
     return docs
 
-def load_QA_pairs(file_path):
 
+def load_QA_pairs(file_path):
     print("🔄 Loading QA pairs...")
     docs = []
     with open(file_path, "r", encoding="utf-8") as f:
@@ -43,8 +35,9 @@ def load_QA_pairs(file_path):
                 "content": data["document"],
                 "question": data["question"],
                 "answer": data["answer"],
-                })
+            })
     return docs
+
 
 def get_context(question, docs, k, index, metadata):
     # Embed the question
@@ -62,36 +55,44 @@ def get_context(question, docs, k, index, metadata):
         doc_content = docs[doc_meta["id"]]
         contexts.append(f"Document {counter}: {doc_content}")
         counter += 1
-    
+
     return "\n".join(contexts)
 
 
 # Test for different values of k (1, 2, 3, 4, 5)
 
+def remove_think_block(text):
+    # This pattern matches the <think>...</think> block, including line breaks
+    return re.sub(r"<think>.*?</think>\s*", "", text, flags=re.DOTALL)
+
+
 def run_k(k, questions, docs, llm, model_name, index, metadata):
     with tqdm(total=len(questions), unit="doc") as pbar:
         with open(f"data/{model_name}_k{k}.jsonl", "w", encoding="utf-8") as f:
             nr_of_bad_docs = 0
-            
+
             for i, qa in enumerate(questions, start=1):
                 # Get the context for the current question
                 context = get_context(qa["question"], docs, k, index, metadata)
+                relevant_doc_in_context = True if qa["content"] in context else False
                 response = chain.invoke({"context": context, "question": qa["question"]})
+                parsed_response = remove_think_block(response)
                 try:
                     # Extract the answer from the response
-                    lines = response.split("\n")
+                    lines = parsed_response.split("\n")
                     answer = lines[0].split(": ", 1)[1]  # Extract the part after "Answer: "
-                    
+
                 except IndexError or ValueError:
                     # Handle cases where the response format is unexpected
                     nr_of_bad_docs += 1
-                    answer = response
-                
+                    answer = parsed_response
+
                 f.write(json.dumps({
                     "id": qa["id"],
                     "content": qa["content"],
                     "question": qa["question"],
                     "expected_answer": qa["answer"],
+                    "relevant_doc_in_context": relevant_doc_in_context,
                     "answer": answer,
                     "context": context,
                 }) + "\n")
@@ -101,6 +102,15 @@ def run_k(k, questions, docs, llm, model_name, index, metadata):
             print(f"\n\n🔄 Processed {len(questions)} documents with {k} context documents. Bad docs: {nr_of_bad_docs}")
 
 
+# --- Config ---
+FAISS_INDEX_PATH = "faiss/faiss_index-updated.index"
+METADATA_PATH = "faiss/metadata-updated.pkl"
+DOCUMENTS_PATH = "data/refined-web-2m-updated.jsonl"
+QA_PAIRS_PATH = "data/QA-pair-1000-huggingface.jsonl"
+EMBEDDING_MODEL_NAME = "nomic-embed-text"
+LLM_MODEL_NAME = "llama3.1:8b-instruct-fp16"
+TOP_K = 3  # Default
+
 if __name__ == "__main__":
 
     if len(sys.argv) < 4:
@@ -108,7 +118,7 @@ if __name__ == "__main__":
         sys.exit(1)
     llm_model_name = sys.argv[1]
     embedding_model_name = sys.argv[2]
-    k_value = sys.argv[3] if len(sys.argv) > 3 else TOP_K
+    k_value = int(sys.argv[3]) if len(sys.argv) > 3 else TOP_K
     print(f"Running RAG test with LLM: {llm_model_name} and Embedding Model: {embedding_model_name}...")
 
     # --- Load Model, Index, Metadata ---
@@ -139,7 +149,6 @@ if __name__ == "__main__":
 
     
     """
-
 
     prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | model

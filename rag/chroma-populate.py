@@ -1,0 +1,98 @@
+
+import chromadb
+import ollama
+import pprint
+import json
+from langchain_ollama import OllamaEmbeddings
+from tqdm import tqdm
+
+
+def load_documents(file_path):
+    print("🔄 Loading documents...")
+    docs = {}
+    counter = 0
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if counter == 1000:
+                break
+            counter += 1
+            data = json.loads(line.strip())
+            docs[data["id"]] = data["content"]
+    return docs
+
+def load_QA_pairs(file_path):
+    print("🔄 Loading QA pairs...")
+    pairs = []
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            data = json.loads(line.strip())
+            pairs.append({
+                "id": data["id"],
+                "content": data["document"],
+                "question": data["question"],
+                "answer": data["answer"],
+                })
+    return pairs
+
+def embed_documents(documents, embedding, batch_size=32):
+    embeddings = []
+    batch = []
+    with tqdm(total=len(documents), desc="Embedding documents: ") as pbar:
+        for doc in documents:
+            batch.append(doc)
+            if len(batch) >= batch_size:
+                batch_embeddings = embedding.embed_documents(batch)
+                embeddings.extend(batch_embeddings)
+                batch = []
+                pbar.update(32)
+        # Remaining documents
+        batch_embeddings = embedding.embed_documents(batch)
+        embeddings.extend(batch_embeddings)
+        pbar.update(len(batch))
+    return embeddings
+
+def add_documents(collection, embedding):
+    # Separate documents and ids
+    documents = load_documents("data/refined-web-100k-updated.jsonl")
+    document_contents = []
+    document_ids = []
+    for key in documents.keys():
+        document_contents.append(documents[key])
+        document_ids.append(key)
+
+    embeddings = embed_documents(document_contents, embedding, 32)
+
+    # Add data to a collection
+    collection.add(
+        documents=document_contents,
+        embeddings=embeddings,
+        ids=document_ids
+    )
+
+
+def main():
+    embedding = OllamaEmbeddings(model="nomic-embed-text")
+    client = chromadb.PersistentClient()
+    collection = client.get_or_create_collection(name="101k_performance_test")
+    add_documents(collection, embedding)
+
+
+    # print(collection.count())
+    # pprint.pp(collection.)
+    # query_embedding = embedding.embed_query("It is construction closely resembles regular DHEA however the")
+    # pprint.pp(collection.query(
+    #     query_embeddings=[query_embedding],
+    #     n_results=3
+    # ))
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+
+
+
