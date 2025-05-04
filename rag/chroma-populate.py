@@ -44,6 +44,7 @@ def embed_documents(documents, embedding, batch_size=32):
                 batch_embeddings = embedding.embed_documents(batch)
                 embeddings.extend(batch_embeddings)
                 batch = []
+                id_batch = []
                 pbar.update(32)
         # Remaining documents
         batch_embeddings = embedding.embed_documents(batch)
@@ -60,14 +61,39 @@ def add_documents(collection, embedding):
         document_contents.append(documents[key])
         document_ids.append(key)
 
-    embeddings = embed_documents(document_contents, embedding, 32)
+    # embeddings = embed_documents(document_contents, embedding, 32)
 
     # Add data to a collection
-    collection.add(
-        documents=document_contents,
-        embeddings=embeddings,
-        ids=document_ids
-    )
+    # collection.add(
+    #     documents=document_contents,
+    #     embeddings=embeddings,
+    #     ids=document_ids
+    # )
+
+    batch = []
+    id_batch = []
+    with tqdm(total=len(document_contents), desc="Embedding documents: ") as pbar:
+        for index, doc in enumerate(document_contents):
+            batch.append(doc)
+            id_batch.append(document_ids[index])
+            if len(batch) >= 32:
+                batch_embeddings = embedding.embed_documents(batch)
+                collection.add(
+                    documents=batch,
+                    embeddings=batch_embeddings,
+                    ids=id_batch
+                )
+                batch = []
+                id_batch = []
+                pbar.update(32)
+        # Remaining documents
+        batch_embeddings = embedding.embed_documents(batch)
+        collection.add(
+            documents=batch,
+            embeddings=batch_embeddings,
+            ids=id_batch
+        )
+        pbar.update(len(batch))
 
 
 def main():
