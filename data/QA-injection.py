@@ -5,8 +5,8 @@ from tqdm import tqdm
 
 
 
-DOCUMENT_PATH = "data/refined-web-2m.jsonl"
-OUTPUT_PATH_REFINED_WEB = "data/refined-web-2m-updated.jsonl"
+DOCUMENT_PATH = "data/refined-web-100k.jsonl"
+OUTPUT_PATH_REFINED_WEB = "data/refined-web-100k-updated.jsonl"
 OUTPUT_QA_PAIRS = "data/QA-pair-1000-huggingface.jsonl"
 
 huggingface_QA_pairs = load_dataset("pinecone/refinedweb-generated-questions", split="train")

@@ -10,19 +10,19 @@ from tqdm import tqdm
 
 # --- Config ---
 TOTAL_DOCS_TO_PROCESS = 2_001_000
-MODEL_NAME = "nomic-embed-text"
+MODEL_NAME = "nomic-embed-text1"
 # DOCUMENTS_FILE = "final-document-chunks.jsonl"
-DOCUMENTS_FILE = "refined-web-2m-updated.jsonl"
+DOCUMENTS_FILE = "data/refined-web-100k-updated.jsonl"
 BATCH_SIZE = 64
-FAISS_INDEX_PATH = "faiss_index-updated.index"
-METADATA_PATH = "metadata-updated.pkl"
+FAISS_INDEX_PATH = "faiss_index-101k.index"
+METADATA_PATH = "metadata-101k.pkl"
 
 # --- Embedding Model ---
 embedding = OllamaEmbeddings(model=MODEL_NAME)
 
 # --- Storage ---
 all_vectors = []
-all_metadata = [] 
+all_metadata = []
 all_ids = []
 dimension = None
 doc_count = 0
