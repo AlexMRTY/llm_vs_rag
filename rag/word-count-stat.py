@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 
+import pandas as pd
+
+
 def load_documents(file_path):
     print("🔄 Loading documents...")
     docs = {}
@@ -15,8 +18,22 @@ def load_documents(file_path):
             docs[data["id"]] = data["document"]
     return docs
 
+def filter_away_true_or_false(docs, filter_away):
+    counter = 0
+    # stats = pd.read_csv("data/101k-test/chromadb-multistep-stats.csv")
+    stats = pd.read_csv("data/101k-test/chromadb-stats.csv")
+
+    stats = stats.reset_index()
+    for index, row in stats.iterrows():
+        if row["correct_retrieval"] == filter_away:
+            docs.pop(row["id"])
+            counter += 1
+    print(f"Removed {counter} documents from the dataset")
+    return docs
+
+
 # documents = load_documents("data/refined-web-100k-updated.jsonl")
-documents = load_documents("data/QA-pair-1000-huggingface.jsonl")
+documents = filter_away_true_or_false(load_documents("data/QA-pair-1000-huggingface.jsonl"), True)
 
 # Choose whether to measure length in characters or words
 measure_by_words = True

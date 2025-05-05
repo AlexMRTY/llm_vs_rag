@@ -4,6 +4,7 @@ import json
 
 import pandas as pd
 from langchain_chroma import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_ollama import OllamaEmbeddings, OllamaLLM
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from tqdm import tqdm
@@ -24,12 +25,12 @@ def load_documents(file_path):
 def load_QA_pairs(file_path):
     print("🔄 Loading QA pairs...")
     pairs = []
-    # counter = 0
+    counter = 0
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
-            # if counter == 10:
-            #     break
-            # counter += 1
+            if counter == 10:
+                break
+            counter += 1
             data = json.loads(line.strip())
             pairs.append({
                 "id": data["id"],
@@ -74,10 +75,15 @@ def run_test(qa_pairs, retriever: MultiQueryRetriever) -> (pd.DataFrame, dict):
 
 def main():
     embedding = OllamaEmbeddings(model="nomic-embed-text")
-    vector_store = Chroma(
-        collection_name="101k_performance_test",
-        embedding_function=embedding,
-        persist_directory="data/101k-test/chroma"
+    # vector_store = Chroma(
+    #     collection_name="101k_performance_test",
+    #     embedding_function=embedding,
+    #     persist_directory="data/101k-test/chroma"
+    # )
+    vector_store = FAISS.load_local(
+        folder_path="data/101k-test/faiss_index-101k",
+        embeddings=embedding,
+        allow_dangerous_deserialization=True
     )
 
     llm = OllamaLLM(model="qwen2.5:14b-instruct")

@@ -81,7 +81,7 @@ def main():
     embedding = OllamaEmbeddings(model="nomic-embed-text")
     faiss_index = faiss.read_index("data/101k-test/faiss_index-101k.index")
 
-    with open("data/101k-test/metadata-101k.pkl", "rb") as f:
+    with open("data/101k-test/metadata.pkl", "rb") as f:
         meta = pickle.load(f)
         ids = meta["ids"]
         faiss_metadata = meta["metadata"]

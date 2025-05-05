@@ -105,7 +105,7 @@ def main():
 
     # print(collection.count())
     # pprint.pp(collection.)
-    query_embedding = embedding.embed_query("Bonjour Paris! Paris is the capital and largest city of France")
+    query_embedding = embedding.embed_query("When were the WHO/CIOMS International Ethical Guidelines for Biomedical Research Involving Human Subjects published?")
     pprint.pp(collection.query(
         query_embeddings=[query_embedding],
         n_results=3
