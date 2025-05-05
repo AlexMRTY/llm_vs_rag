@@ -24,12 +24,12 @@ def load_documents(file_path):
 def load_QA_pairs(file_path):
     print("🔄 Loading QA pairs...")
     pairs = []
-    counter = 0
+    # counter = 0
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
-            if counter == 10:
-                break
-            counter += 1
+            # if counter == 10:
+            #     break
+            # counter += 1
             data = json.loads(line.strip())
             pairs.append({
                 "id": data["id"],
