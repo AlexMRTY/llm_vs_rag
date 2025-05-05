@@ -98,18 +98,18 @@ def add_documents(collection, embedding):
 
 def main():
     embedding = OllamaEmbeddings(model="nomic-embed-text")
-    client = chromadb.PersistentClient()
+    client = chromadb.PersistentClient("data/101k-test/chroma")
     collection = client.get_or_create_collection(name="101k_performance_test")
-    add_documents(collection, embedding)
+    # add_documents(collection, embedding)
 
 
     # print(collection.count())
     # pprint.pp(collection.)
-    # query_embedding = embedding.embed_query("It is construction closely resembles regular DHEA however the")
-    # pprint.pp(collection.query(
-    #     query_embeddings=[query_embedding],
-    #     n_results=3
-    # ))
+    query_embedding = embedding.embed_query("Bonjour Paris! Paris is the capital and largest city of France")
+    pprint.pp(collection.query(
+        query_embeddings=[query_embedding],
+        n_results=3
+    ))
 
 if __name__ == '__main__':
     main()

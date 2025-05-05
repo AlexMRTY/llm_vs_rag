@@ -1,0 +1,9 @@
+langchain-core~=0.3.51
+tqdm~=4.66.5
+faiss-cpu~=1.9.0
+numpy~=2.2.5
+chromadb~=0.4.24
+ollama~=0.4.8
+matplotlib~=3.10.1
+pandas~=2.2.3
+langchain~=0.3.25
