@@ -120,22 +120,22 @@ def load_qa_pairs(qa_results_paths):
     """
 async def eval_answer_accuracy(dataset) -> tuple:
     answerAccuracy = AnswerAccuracy(llm=llm) 
-    factualCorrectness = FactualCorrectness(llm=llm) 
+    # factualCorrectness = FactualCorrectness(llm=llm)
     scores = []
     errors = []
     with tqdm(total=len(dataset.keys()), unit="question") as pbar:
         for sampleKey in dataset.keys():
             sample = dataset[sampleKey]
-            # answerAccuracyScore = await answerAccuracy.single_turn_ascore(sample)
-            factualCorrectnessScore = await factualCorrectness.single_turn_ascore(sample)
+            answerAccuracyScore = await answerAccuracy.single_turn_ascore(sample)
+            # factualCorrectnessScore = await factualCorrectness.single_turn_ascore(sample)
             try:
                 scores.append({
                     "id": sampleKey,
                     "user_input": sample.user_input,
                     "response": sample.response,
                     "reference": sample.reference,
-                    # "answer_accuracy_score": answerAccuracyScore,
-                    "factual_correctness_score": factualCorrectnessScore
+                    "answer_accuracy_score": answerAccuracyScore,
+                    # "factual_correctness_score": factualCorrectnessScore
                 })
             except ValueError:
                 errors.append(sampleKey)
