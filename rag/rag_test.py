@@ -92,7 +92,7 @@ def run_k(k, questions, docs, llm, model_name, index, metadata):
                     "content": qa["content"],
                     "question": qa["question"],
                     "expected_answer": qa["answer"],
-                    "relevant_doc_in_context": relevant_doc_in_context,
+                    "retrieval_hit": relevant_doc_in_context,
                     "answer": answer,
                     "context": context,
                 }) + "\n")
@@ -127,8 +127,8 @@ if __name__ == "__main__":
     model = OllamaLLM(model=llm_model_name)
     faiss_index = faiss.read_index(FAISS_INDEX_PATH)
 
-    with open(METADATA_PATH, "rb") as f:
-        meta = pickle.load(f)
+    with open(METADATA_PATH, "rb") as f2:
+        meta = pickle.load(f2)
         ids = meta["ids"]
         faiss_metadata = meta["metadata"]
 

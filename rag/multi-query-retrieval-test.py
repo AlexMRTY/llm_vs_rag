@@ -1,7 +1,7 @@
 
 import pprint
 import json
-
+import sys
 import pandas as pd
 from langchain_chroma import Chroma
 from langchain_community.vectorstores import FAISS
@@ -73,7 +73,7 @@ def run_test(qa_pairs, retriever: MultiQueryRetriever) -> (pd.DataFrame, dict):
 
 
 
-def main():
+def main(output_path):
     embedding = OllamaEmbeddings(model="nomic-embed-text")
     # vector_store = Chroma(
     #     collection_name="101k_performance_test",
@@ -93,12 +93,13 @@ def main():
 
     stats, summary = run_test(qa_pairs, retriever)
 
-    stats.to_csv("data/101k-test/chromadb-multistep-stats.csv", index=False)
+    stats.to_csv(output_path, index=False)
     pprint.pp(summary)
 
-    # query = "What is the setting timeframe of Jeet Thayil's 'Narcopolis'?"
-    # results = retriever.get_relevant_documents(query)
-    # pprint.pp(results)
 
-
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Usage: python multi-query-retrieval-test.py <path-for-output>")
+        sys.exit(1)
+    output = sys.argv[1]
+    main(output)

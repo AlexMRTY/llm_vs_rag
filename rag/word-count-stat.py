@@ -21,7 +21,7 @@ def load_documents(file_path):
 def filter_away_true_or_false(docs, filter_away):
     counter = 0
     # stats = pd.read_csv("data/101k-test/chromadb-multistep-stats.csv")
-    stats = pd.read_csv("data/101k-test/chromadb-stats.csv")
+    stats = pd.read_csv("data/101k-test/chromadb-multistep-stats.csv")
 
     stats = stats.reset_index()
     for index, row in stats.iterrows():
