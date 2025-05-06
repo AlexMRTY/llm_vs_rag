@@ -21,6 +21,24 @@ import asyncio
 import os
 import sys
 
+# from dotenv import load_dotenv
+
+# load_dotenv()
+#
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# if not OPENAI_API_KEY:
+#     print("Please set the OPENAI_API_KEY environment variable.")
+#     sys.exit(1)
+#
+# OPENAI_ORG_ID = os.getenv("OPENAI_ORG_ID")
+# if not OPENAI_ORG_ID:
+#     print("Please set the OPENAI_ORG_ID environment variable.")
+#     sys.exit(1)
+#
+# OPENAI_PROJECT_ID = os.getenv("OPENAI_PROJECT_ID")
+# if not OPENAI_PROJECT_ID:
+#     print("Please set the OPENAI_PROJECT_ID environment variable.")
+#     sys.exit(1)
 
 
 def split_documents(contexts):
@@ -58,7 +76,7 @@ def load_qa_pairs(qa_results_paths):
             samples = {}
             count = 0
             for line in f:
-                if count > 3: break;
+                # if count > 3: break;
                 data = json.loads(line.strip())
 
                 # Null control: Ensure required keys exist and are not None
@@ -108,7 +126,7 @@ async def eval_answer_accuracy(dataset) -> tuple:
     with tqdm(total=len(dataset.keys()), unit="question") as pbar:
         for sampleKey in dataset.keys():
             sample = dataset[sampleKey]
-            answerAccuracyScore = await answerAccuracy.single_turn_ascore(sample)
+            # answerAccuracyScore = await answerAccuracy.single_turn_ascore(sample)
             factualCorrectnessScore = await factualCorrectness.single_turn_ascore(sample)
             try:
                 scores.append({
@@ -116,7 +134,7 @@ async def eval_answer_accuracy(dataset) -> tuple:
                     "user_input": sample.user_input,
                     "response": sample.response,
                     "reference": sample.reference,
-                    "answer_accuracy_score": answerAccuracyScore,
+                    # "answer_accuracy_score": answerAccuracyScore,
                     "factual_correctness_score": factualCorrectnessScore
                 })
             except ValueError:
@@ -143,14 +161,18 @@ if __name__ == "__main__":
     print(f"Using model: {model_name}")
 
     llm = LangchainLLMWrapper(OllamaLLM(model=model_name))
+    # llm = LangchainLLMWrapper(ChatOpenAI(
+    #     model="gpt-3.5-turbo-instruct",
+    #     organization=OPENAI_ORG_ID,
+    #     api_key=OPENAI_API_KEY,
+    # ))
     #embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="nomic-embed-text:latest"))
 
     qa_results_paths = [
-    "results/llama3.1:8b-instruct-fp16_k1.jsonl",
-    "results/llama3.1:8b-instruct-fp16_k2.jsonl",
-    "results/llama3.1:8b-instruct-fp16_k3.jsonl",
-    "results/llama3.1:8b-instruct-fp16_k4.jsonl",
-    "results/llama3.1:8b-instruct-fp16_k5.jsonl",
+        "results/qwen2.5:14b-instruct-q8_0_k3.jsonl",
+        "results/gpt-3.5-turbo-0125_k3.jsonl",
+        "results/gemma3:27b-it-q8_0_k3.jsonl",
+        "results/gemma3:12b-it-q8_0_k3.jsonl",
     ]
     samples_collection = load_qa_pairs(qa_results_paths)
 
@@ -160,15 +182,15 @@ if __name__ == "__main__":
         result, errors = asyncio.run(eval_answer_accuracy(samples))
 
         # Ensure the directory exists
-        output_dir = "results/evaluations/ragas-local-qwen"
+        output_dir = "results/evaluations/gpt3.5-turbo-it"
         os.makedirs(output_dir, exist_ok=True)
 
         # Save Results to csv
         df_results = pd.DataFrame(result)
-        df_results.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_AA_FC.csv", index=False)
+        df_results.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_FC.csv", index=False)
         print(f"Results for {sample_name} saved to CSV.")
 
         # Save Errors to csv
         df_errors = pd.DataFrame(errors)
-        df_errors.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_AA_FC_errors.csv", index=False)
+        df_errors.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_FC_errors.csv", index=False)
         print(f"Errors for {sample_name} saved to CSV.")
