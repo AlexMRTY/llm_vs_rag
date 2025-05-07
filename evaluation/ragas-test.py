@@ -182,7 +182,7 @@ if __name__ == "__main__":
         result, errors = asyncio.run(eval_answer_accuracy(samples))
 
         # Ensure the directory exists
-        output_dir = "results/evaluations/gpt3.5-turbo-it"
+        output_dir = "results/evaluations/ragas-runpod-mistral-8x7b-instruct-v0.1"
         os.makedirs(output_dir, exist_ok=True)
 
         # Save Results to csv

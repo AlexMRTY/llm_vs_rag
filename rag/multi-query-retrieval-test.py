@@ -3,7 +3,7 @@ import pprint
 import json
 import sys
 import pandas as pd
-from langchain_chroma import Chroma
+# from langchain_chroma import Chroma
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import OllamaEmbeddings, OllamaLLM
 from langchain.retrievers.multi_query import MultiQueryRetriever

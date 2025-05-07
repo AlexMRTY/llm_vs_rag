@@ -35,7 +35,7 @@ def run_test(qa_pairs, collection, embedding) -> (pd.DataFrame, dict):
             query_embedding = embedding.embed_query(pair["question"])
             results = collection.query(
                 query_embeddings=[query_embedding],
-                n_results=3
+                n_results=1000
             )
             stats["id"].append(pair["id"])
             if pair["content"] in results['documents'][0]:
@@ -56,7 +56,7 @@ def main():
 
     stats, summary = run_test(qa_pairs, collection, embedding)
 
-    stats.to_csv("data/101k-test/chromadb-stats-1.csv", index=False)
+    # stats.to_csv("data/101k-test/chromadb-stats-1.csv", index=False)
     print(summary)
 
 if __name__ == '__main__':

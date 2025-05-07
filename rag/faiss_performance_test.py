@@ -6,6 +6,8 @@ import numpy as np
 import pickle
 
 from langchain_ollama import OllamaEmbeddings
+from langchain_community.vectorstores import FAISS
+
 
 from tqdm import tqdm  # For progress reporting
 
@@ -51,6 +53,12 @@ def get_context(question_vector, docs, k, index, metadata):
 
     return contexts
 
+def content_in_context(content, context):
+    for doc in context:
+        if content in doc.page_content:
+            return True
+    return False
+
 def run_test(qa_pairs, index, metadata, embedding, documents) -> (pd.DataFrame, dict):
     stats = {
         "id": [],
@@ -64,8 +72,9 @@ def run_test(qa_pairs, index, metadata, embedding, documents) -> (pd.DataFrame, 
         for i, pair in enumerate(qa_pairs, start=1):
             query_embedding = embedding.embed_query(pair["question"])
             context = get_context(query_embedding, documents, 3, index, metadata)
-
+            # context = vector_store.similarity_search(pair["question"], k=1000)
             stats["id"].append(pair["id"])
+            # if content_in_context(pair["content"], context):
             if pair["content"] in context:
                 stats["correct_retrieval"].append(True)
                 summary["correct"] += 1
@@ -79,9 +88,14 @@ def run_test(qa_pairs, index, metadata, embedding, documents) -> (pd.DataFrame, 
 def main():
 
     embedding = OllamaEmbeddings(model="nomic-embed-text")
-    faiss_index = faiss.read_index("data/101k-test/faiss_index-101k.index")
+    faiss_index = faiss.read_index("faiss/faiss_index.index")
+    # vector_store = FAISS.load_local(
+    #     folder_path="data/101k-test/faiss_index-101k",
+    #     embeddings=embedding,
+    #     allow_dangerous_deserialization=True
+    # )
 
-    with open("data/101k-test/metadata.pkl", "rb") as f:
+    with open("faiss/metadata.pkl", "rb") as f:
         meta = pickle.load(f)
         ids = meta["ids"]
         faiss_metadata = meta["metadata"]
@@ -91,7 +105,7 @@ def main():
 
     stats, summary = run_test(qa_pairs, faiss_index, faiss_metadata, embedding, docs)
 
-    stats.to_csv("data/101k-test/faiss-stats-1.csv", index=False)
+    # stats.to_csv("data/101k-test/faiss-stats-k1000.csv", index=False)
     print(summary)
 
 

@@ -1,3 +1,6 @@
+from langchain_openai import OpenAI
+from openai import api_key, organization
+
 import faiss
 import pickle
 import json
@@ -68,7 +71,7 @@ def remove_think_block(text):
 
 def run_k(k, questions, docs, llm, model_name, index, metadata):
     with tqdm(total=len(questions), unit="doc") as pbar:
-        with open(f"data/{model_name}_k{k}.jsonl", "w", encoding="utf-8") as f:
+        with open(f"results/{model_name}_k{k}.jsonl", "w", encoding="utf-8") as f:
             nr_of_bad_docs = 0
 
             for i, qa in enumerate(questions, start=1):
@@ -111,12 +114,32 @@ EMBEDDING_MODEL_NAME = "nomic-embed-text"
 LLM_MODEL_NAME = "llama3.1:8b-instruct-fp16"
 TOP_K = 3  # Default
 
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    print("Please set the OPENAI_API_KEY environment variable.")
+    sys.exit(1)
+
+OPENAI_ORG_ID = os.getenv("OPENAI_ORG_ID")
+if not OPENAI_ORG_ID:
+    print("Please set the OPENAI_ORG_ID environment variable.")
+    sys.exit(1)
+
+OPENAI_PROJECT_ID = os.getenv("OPENAI_PROJECT_ID")
+if not OPENAI_PROJECT_ID:
+    print("Please set the OPENAI_PROJECT_ID environment variable.")
+    sys.exit(1)
+
 if __name__ == "__main__":
 
     if len(sys.argv) < 4:
         print("Usage: python rag_test.py <model_name> <embedding_model_name> <k-value>")
         sys.exit(1)
-    llm_model_name = sys.argv[1]
+    # llm_model_name = sys.argv[1]
+    llm_model_name = "gpt-3.5-turbo-0125"
     embedding_model_name = sys.argv[2]
     k_value = int(sys.argv[3]) if len(sys.argv) > 3 else TOP_K
     print(f"Running RAG test with LLM: {llm_model_name} and Embedding Model: {embedding_model_name}...")
@@ -124,7 +147,11 @@ if __name__ == "__main__":
     # --- Load Model, Index, Metadata ---
     print("🔄 Loading FAISS index and metadata...")
     embedding = OllamaEmbeddings(model=embedding_model_name)
-    model = OllamaLLM(model=llm_model_name)
+    model = OpenAI(
+        model="gpt-3.5-turbo-instruct",
+        api_key=OPENAI_API_KEY,
+        organization=OPENAI_ORG_ID
+    )
     faiss_index = faiss.read_index(FAISS_INDEX_PATH)
 
     with open(METADATA_PATH, "rb") as f2:
@@ -146,8 +173,6 @@ if __name__ == "__main__":
     It's critical that the answer follows the output format exactly as specified below. And do not include any additional text or explanations.
     Output format:
     Answer: <answer>
-
-    
     """
 
     prompt = ChatPromptTemplate.from_template(template)
