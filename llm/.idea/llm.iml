@@ -13,4 +13,7 @@
     <option name="requirementsPath" value="$MODULE_DIR$/requirements.txt" />
     <option name="removeUnused" value="true" />
   </component>
+  <component name="PackageRequirementsSettings">
+    <option name="requirementsPath" value="$MODULE_DIR$/requirements.txt" />
+  </component>
 </module>

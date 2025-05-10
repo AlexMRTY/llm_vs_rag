@@ -59,7 +59,7 @@ def content_in_context(content, context):
             return True
     return False
 
-def run_test(qa_pairs, index, metadata, embedding, documents) -> (pd.DataFrame, dict):
+def run_test(qa_pairs, vector_store, metadata, embedding, documents) -> (pd.DataFrame, dict):
     stats = {
         "id": [],
         "correct_retrieval": []
@@ -71,11 +71,11 @@ def run_test(qa_pairs, index, metadata, embedding, documents) -> (pd.DataFrame, 
     with tqdm(total=len(qa_pairs), desc="Testing: ") as pbar:
         for i, pair in enumerate(qa_pairs, start=1):
             query_embedding = embedding.embed_query(pair["question"])
-            context = get_context(query_embedding, documents, 3, index, metadata)
-            # context = vector_store.similarity_search(pair["question"], k=1000)
+            # context = get_context(query_embedding, documents, 3, index, metadata)
+            context = vector_store.similarity_search(pair["question"], k=10)
             stats["id"].append(pair["id"])
-            # if content_in_context(pair["content"], context):
-            if pair["content"] in context:
+            if content_in_context(pair["content"], context):
+            # if pair["content"] in context:
                 stats["correct_retrieval"].append(True)
                 summary["correct"] += 1
             else:
@@ -88,12 +88,12 @@ def run_test(qa_pairs, index, metadata, embedding, documents) -> (pd.DataFrame, 
 def main():
 
     embedding = OllamaEmbeddings(model="nomic-embed-text")
-    faiss_index = faiss.read_index("faiss/faiss_index.index")
-    # vector_store = FAISS.load_local(
-    #     folder_path="data/101k-test/faiss_index-101k",
-    #     embeddings=embedding,
-    #     allow_dangerous_deserialization=True
-    # )
+    # faiss_index = faiss.read_index("faiss/faiss_index.index")
+    vector_store = FAISS.load_local(
+        folder_path="data/101k-test/faiss_index-101k-ivf",
+        embeddings=embedding,
+        allow_dangerous_deserialization=True
+    )
 
     with open("faiss/metadata.pkl", "rb") as f:
         meta = pickle.load(f)
@@ -103,7 +103,9 @@ def main():
     qa_pairs = load_QA_pairs("data/QA-pair-1000-huggingface.jsonl")
     docs = load_documents("data/refined-web-100k-updated.jsonl")
 
-    stats, summary = run_test(qa_pairs, faiss_index, faiss_metadata, embedding, docs)
+    # stats, summary = run_test(qa_pairs, faiss_index, faiss_metadata, embedding, docs)
+    stats, summary = run_test(qa_pairs, vector_store, faiss_metadata, embedding, docs)
+
 
     # stats.to_csv("data/101k-test/faiss-stats-k1000.csv", index=False)
     print(summary)

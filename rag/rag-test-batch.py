@@ -1,6 +1,6 @@
 import argparse
 
-from langchain_openai import OpenAI
+from openai import OpenAI
 from openai import api_key, organization
 
 import faiss
@@ -71,35 +71,41 @@ def remove_think_block(text):
     return re.sub(r"<think>.*?</think>\s*", "", text, flags=re.DOTALL)
 
 
-def run_k(k, questions, chain, docs, model_name, index, metadata, embedding):
+def run_k(k, questions, docs, model_name, temp, index, metadata, embedding):
+    # Make sure the directory exists
+    os.makedirs("results/batches", exist_ok=True)
     with tqdm(total=len(questions), unit="doc") as pbar:
-        with open(f"results/{model_name}_k{k}.jsonl", "w", encoding="utf-8") as f:
+        with open(f"results/batches/batch_{model_name}_k{k}_t{temp}.jsonl", "w", encoding="utf-8") as f:
             nr_of_bad_docs = 0
 
             for i, qa in enumerate(questions, start=1):
                 # Get the context for the current question
                 context = get_context(qa["question"], docs, k, index, metadata, embedding)
                 relevant_doc_in_context = True if qa["content"] in context else False
-                response = chain.invoke({"context": context, "question": qa["question"]})
-                parsed_response = remove_think_block(response)
-                try:
-                    # Extract the answer from the response
-                    lines = parsed_response.split("\n")
-                    answer = lines[0].split(": ", 1)[1]  # Extract the part after "Answer: "
-
-                except IndexError or ValueError:
-                    # Handle cases where the response format is unexpected
-                    nr_of_bad_docs += 1
-                    answer = parsed_response
-
+                # response = chain.invoke({"context": context, "question": qa["question"]})
+                # parsed_response = remove_think_block(response)
                 f.write(json.dumps({
-                    "id": qa["id"],
-                    "content": qa["content"],
-                    "question": qa["question"],
-                    "expected_answer": qa["answer"],
-                    "retrieval_hit": relevant_doc_in_context,
-                    "answer": answer,
-                    "context": context,
+                    "custom_id": f"request_{i}",
+                    "method": "POST",
+                    "url": "/v1/chat/completions",
+                    "body": {
+                        "model": model_name,
+                        "temperature": temp,
+                        "response_format": {
+                            "type": "json_object"
+                        },
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": LLM_INSTRUCTION
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Context: {context}\n\nQuestion: {qa['question']}"
+                            }
+                        ],
+                        "max_tokens": 500
+                    }
                 }) + "\n")
                 # Update progress bar
                 pbar.set_description(f"K: {k}. Processed {i} docs")
@@ -122,18 +128,22 @@ LLM_INSTRUCTION = """
         Don't address the context directly, but use it to answer the user question like it's your own knowledge.
         Answer in short, use up to 10 words.
 
-        Context:
-        {context}
-
-        Question: {question}
-
         It's critical that the answer follows the output format exactly as specified below. And do not include any additional text or explanations.
         Output format:
+        Answer: <answer>
+        
+        Example:
+        INPUT:
+        Context: <context>
+        Question: <question>
+        
+        OUTPUT:
         Answer: <answer>
         """
 
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -162,12 +172,6 @@ def main():
     # --- Load Model, Index, Metadata ---
     print("🔄 Loading FAISS index and metadata...")
     embedding = OllamaEmbeddings(model=embedding_model_name)
-    model = OllamaLLM(model=llm_model_name)
-    # model = OpenAI(
-    #     model="gpt-3.5-turbo-instruct",
-    #     api_key=OPENAI_API_KEY,
-    #     organization=OPENAI_ORG_ID
-    # )
     faiss_index = faiss.read_index(FAISS_INDEX_PATH)
 
     with open(METADATA_PATH, "rb") as f2:
@@ -175,24 +179,33 @@ def main():
         ids = meta["ids"]
         faiss_metadata = meta["metadata"]
 
-
-    prompt = ChatPromptTemplate.from_template(LLM_INSTRUCTION)
-    chain = prompt | model
-
     documents = load_documents(DOCUMENTS_PATH)
     qa_pairs = load_QA_pairs(QA_PAIRS_PATH)
 
-    # --- Run the test ---
     run_k(
-        k=k_value,
+        k=3,
         questions=qa_pairs,
         docs=documents,
-        chain=chain,
         model_name=llm_model_name,
+        temp=0.8,
         index=faiss_index,
         metadata=faiss_metadata,
         embedding=embedding
     )
+
+    # --- Run the test ---
+    # for k in [2, 3, 4, 5, 6]:
+    #     for t in [0.2, 0.3, 0.4, 0.5, 0.6]:
+    #         run_k(
+    #             k=k,
+    #             questions=qa_pairs,
+    #             docs=documents,
+    #             model_name=llm_model_name,
+    #             temp=t,
+    #             index=faiss_index,
+    #             metadata=faiss_metadata,
+    #             embedding=embedding
+    #         )
 
 
     # for k in [1, 2, 3, 4, 5]:
@@ -200,10 +213,9 @@ def main():
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description='Run RAG test')
-    parser.add_argument("-m", '--model_name', type=str, required=True, help='Eval LLM model name')
-    parser.add_argument("-e", '--embedding_model_name', type=str, required=True, help='Embedding model name')
+    parser.add_argument("-m", '--model_name', type=str, required=True, help='Eval LLM model name Example: gpt-3.5-turbo-instruct')
+    parser.add_argument("-e", '--embedding_model_name', type=str, required=True, help='Embedding model name: Example: nomic-embed-text')
     parser.add_argument("-k", '--k_value', type=int, default=TOP_K, help='Number of context documents to retrieve')
     args = parser.parse_args()
 

@@ -23,17 +23,9 @@ if not OPENAI_PROJECT_ID:
     print("Please set the OPENAI_PROJECT_ID environment variable.")
     sys.exit(1)
 
-def main(batch):
-
-
-    client = OpenAI(
-        api_key=OPENAI_API_KEY,
-        organization=OPENAI_ORG_ID,
-        project=OPENAI_PROJECT_ID
-    )
-
+def upload_batch(batch, client):
     uploaded_file = client.files.create(
-        file=open(f"../data/{batch}", "rb"),
+        file=open(f"../data/batches-fixed/{batch}", "rb"),
         purpose="batch"
     )
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -53,13 +45,56 @@ def main(batch):
 
     print(f"Batch created with ID: {created_batch.id}")
 
+def main(names):
+
+    client = OpenAI(
+        api_key=OPENAI_API_KEY,
+        organization=OPENAI_ORG_ID,
+        project=OPENAI_PROJECT_ID
+    )
+
+    for name in names:
+        print(f"Uploading batch: {name}")
+        upload_batch(name, client)
+
+
+
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Create a batch using the OpenAI API.")
-    parser.add_argument("-b", "--batch_input_file", type=str, help="The input file for the batch.")
+    # parser = argparse.ArgumentParser(description="Create a batch using the OpenAI API.")
+    # parser.add_argument("-b", "--batch_input_file", type=str, help="The input file for the batch.")
+    #
+    # args = parser.parse_args()
 
-    args = parser.parse_args()
+    file_names = [
+        "batch_gpt-3.5-turbo-0125_k3_t0.8.jsonl"
+        # "batch_gpt-3.5-turbo-instruct_k2_t0.2.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k2_t0.3.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k2_t0.4.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k2_t0.5.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k2_t0.6.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k3_t0.2.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k3_t0.3.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k3_t0.4.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k3_t0.5.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k3_t0.6.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k4_t0.2.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k4_t0.3.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k4_t0.4.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k4_t0.5.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k4_t0.6.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k5_t0.2.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k5_t0.3.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k5_t0.4.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k5_t0.5.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k5_t0.6.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k6_t0.2.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k6_t0.3.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k6_t0.4.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k6_t0.5.jsonl",
+        # "batch_gpt-3.5-turbo-instruct_k6_t0.6.jsonl",
+    ]
 
     main(
-        batch=args.batch_input_file
+        names=file_names
     )

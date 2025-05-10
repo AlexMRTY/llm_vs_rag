@@ -21,7 +21,7 @@ def load_QA_pairs():
     with open("../data/QA-pair-1000-huggingface.jsonl", "r", encoding="utf-8") as f:
         counter = 0
         for line in f:
-            if counter >= 5: break
+            # if counter >= 5: break
             counter += 1
 
             data = json.loads(line.strip())
@@ -49,7 +49,7 @@ def run_test(client, model, qa_pairs) -> list[dict]:
             )
             response_list.append({
                 "id": pair["id"],
-                "content": pair["print(response.text)content"],
+                "content": pair["content"],
                 "question": pair["question"],
                 "answer": response.text,
                 "expected_answer": pair["answer"],
@@ -65,6 +65,11 @@ def main(model):
 
     responses = run_test(client, model, load_QA_pairs())
     print("Done!")
+
+
+    # Save the responses to a JSONL file
+    if not os.path.exists("results"):
+        os.makedirs("results")
 
     with open(f"results/{model}.jsonl", "w", encoding="utf-8") as f:
         for response in responses:

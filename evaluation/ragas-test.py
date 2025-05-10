@@ -59,8 +59,7 @@ def split_documents(contexts):
     
     return documents
 
-
-def load_qa_pairs(qa_results_paths):
+def load_qa_results(qa_results_paths):
     """
     Load the QA pairs from the specified JSONL files.
     Each file is expected to contain a list of dictionaries with keys:
@@ -92,6 +91,7 @@ def load_qa_pairs(qa_results_paths):
             samples_collection[path] = samples
     
     return samples_collection
+
 
 """
     Measures answer accuracy compared to ground truth given a user_input.
@@ -168,13 +168,19 @@ if __name__ == "__main__":
     # ))
     #embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="nomic-embed-text:latest"))
 
-    qa_results_paths = [
-        "results/qwen2.5:14b-instruct-q8_0_k3.jsonl",
-        "results/gpt-3.5-turbo-0125_k3.jsonl",
-        "results/gemma3:27b-it-q8_0_k3.jsonl",
-        "results/gemma3:12b-it-q8_0_k3.jsonl",
+    # qa_results_paths = [
+    #     "results/qwen2.5:14b-instruct-q8_0_k3.jsonl",
+    #     "results/gpt-3.5-turbo-0125_k3.jsonl",
+    #     "results/gemma3:27b-it-q8_0_k3.jsonl",
+    #     "results/gemma3:12b-it-q8_0_k3.jsonl",
+    # ]
+    openai_results_paths = [
+        "results/batch_gpt-4.1-2025-04-14_results.jsonl",
+        "results/batch_gpt-4o-2024-11-20_results.jsonl",
+        "results/gemini-2.5-pro-preview-05-06.jsonl"
     ]
-    samples_collection = load_qa_pairs(qa_results_paths)
+    samples_collection = load_qa_results(openai_results_paths)
+
 
 
     for sample_name in samples_collection.keys():
@@ -182,7 +188,7 @@ if __name__ == "__main__":
         result, errors = asyncio.run(eval_answer_accuracy(samples))
 
         # Ensure the directory exists
-        output_dir = "results/evaluations/ragas-runpod-mistral-8x7b-instruct-v0.1"
+        output_dir = f"results/evaluations/ragas-runpod-{model_name}_amd"
         os.makedirs(output_dir, exist_ok=True)
 
         # Save Results to csv

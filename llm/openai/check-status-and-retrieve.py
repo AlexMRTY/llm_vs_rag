@@ -42,10 +42,10 @@ def main(batch_id, retrieve):
 
         output_file = client.files.content(batch.output_file_id)
         output_file.write_to_file(f"results/{batch.metadata['batch_name'].replace(".jsonl", "")}_results.jsonl")
-        if batch.errors:
-            print("Errors found in batch. Saving error file.")
-            error_file = client.files.content(batch.error_file_id)
-            error_file.write_to_file(f"errors/{batch.metadata['batch_name'].replace('.jsonl', '')}_errors.jsonl")
+        # if batch.errors:
+        print("Errors found in batch. Saving error file.")
+        error_file = client.files.content(batch.error_file_id)
+        error_file.write_to_file(f"errors/{batch.metadata['batch_name'].replace('.jsonl', '')}_errors.jsonl")
         print("Results retrieved successfully.")
     else:
         print("Batch retrieval cancelled.")
