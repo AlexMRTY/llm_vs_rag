@@ -56,7 +56,7 @@ for count, patch in zip(counts, patches):
         plt.text(x, y + 0.5, str(int(count)), ha='center', va='bottom', fontsize=9)
 
 # Styling
-plt.title('Document Length Distribution')
+plt.title('FAISS k1000 Failed Retrieval Documents Length Distribution')
 plt.xlabel('Length (in {})'.format('words' if measure_by_words else 'characters'))
 plt.ylabel('Number of Documents')
 plt.grid(True)

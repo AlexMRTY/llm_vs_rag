@@ -28,14 +28,30 @@ client = OpenAI(
     project=OPENAI_PROJECT_ID
 )
 
+for batch in client.batches.list(limit=30):
+    # if batch.status == "failed":
+        # print(batch.input_file_id)
+        # print (batch.id)
+    if not batch.status == "failed":
+        print(f"-------------{batch.id}----------")
+        print(f"Status: {batch.status}")
+        print(f"Created: {batch.created_at}")
+        print(f"Endpoint: {batch.endpoint}")
+        print(f"Input file ID: {batch.input_file_id}")
+        print(f"Output file ID: {batch.output_file_id}")
+        print(f"Error file ID: {batch.error_file_id}")
+        print(f"Metadata: {batch.metadata}")
+        print(f"Errors: {batch.errors}")
+        print("\n")
+
+print("---------failed----------------")
 for batch in client.batches.list(limit=10):
-    print(f"-------------{batch.id}----------")
-    print(f"Status: {batch.status}")
-    print(f"Created: {batch.created_at}")
-    print(f"Endpoint: {batch.endpoint}")
-    print(f"Input file ID: {batch.input_file_id}")
-    print(f"Output file ID: {batch.output_file_id}")
-    print(f"Error file ID: {batch.error_file_id}")
-    print(f"Metadata: {batch.metadata}")
-    print(f"Errors: {batch.errors}")
-    print("\n")
+
+    if batch.id == "batch_681f67122c748190ad0347115b5428b4":
+        print(batch.id)
+        print(batch.status)
+        print(batch.created_at)
+        print(batch.errors)
+        print(batch.error_file_id)
+    elif not batch.status == "completed" or not batch.status == "in_progress":
+        print(batch.id)
