@@ -71,6 +71,11 @@ def remove_think_block(text):
     return re.sub(r"<think>.*?</think>\s*", "", text, flags=re.DOTALL)
 
 
+@retry(wait=wait_exponential(multiplier=1, min=4, max=60), stop=stop_after_attempt(5))
+def safe_invoke(chain, input):
+    return chain.invoke(input)
+
+
 def run_k(k, questions, chain, docs, model_name, index, metadata, embedding):
     with tqdm(total=len(questions), unit="doc") as pbar:
         with open(f"results/{model_name}_k{k}.jsonl", "w", encoding="utf-8") as f:
@@ -162,12 +167,12 @@ def main():
     # --- Load Model, Index, Metadata ---
     print("🔄 Loading FAISS index and metadata...")
     embedding = OllamaEmbeddings(model=embedding_model_name)
-    model = OllamaLLM(model=llm_model_name)
-    # model = OpenAI(
-    #     model="gpt-3.5-turbo-instruct",
-    #     api_key=OPENAI_API_KEY,
-    #     organization=OPENAI_ORG_ID
-    # )
+    # model = OllamaLLM(model=llm_model_name)
+    model = OpenAI(
+        model="gpt-3.5-turbo-instruct",
+        api_key=OPENAI_API_KEY,
+        organization=OPENAI_ORG_ID
+    )
     faiss_index = faiss.read_index(FAISS_INDEX_PATH)
 
     with open(METADATA_PATH, "rb") as f2:

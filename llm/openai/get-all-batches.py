@@ -45,13 +45,13 @@ for batch in client.batches.list(limit=30):
         print("\n")
 
 print("---------failed----------------")
-for batch in client.batches.list(limit=10):
+for batch in client.batches.list(limit=30):
 
-    if batch.id == "batch_681f67122c748190ad0347115b5428b4":
+    if batch.id == "batch_681fa70231348190bbece69336588d38":
         print(batch.id)
         print(batch.status)
         print(batch.created_at)
         print(batch.errors)
         print(batch.error_file_id)
-    elif not batch.status == "completed" or not batch.status == "in_progress":
-        print(batch.id)
+    # elif not batch.status == "completed" or not batch.status == "in_progress":
+    #     print(batch.id)

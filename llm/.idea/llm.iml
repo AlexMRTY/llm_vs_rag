@@ -8,10 +8,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="evaluation" />
     <orderEntry type="module" module-name="calculations" />
-  </component>
-  <component name="PackageRequirementsSettings">
-    <option name="requirementsPath" value="$MODULE_DIR$/requirements.txt" />
-    <option name="removeUnused" value="true" />
+    <orderEntry type="module" module-name="rag" />
   </component>
   <component name="PackageRequirementsSettings">
     <option name="requirementsPath" value="$MODULE_DIR$/requirements.txt" />
