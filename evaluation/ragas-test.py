@@ -156,27 +156,35 @@ def main():
     model_name = args.model_name
     llm = LangchainLLMWrapper(OllamaLLM(model=model_name))
 
-    base_path = "results/all-k-done"
+    base_path = "results/all-k"
+    # file_names = [
+    #     "gpt-3.5-turbo-instruct_k2_t2.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k2_t3.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k2_t4.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k2_t5.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k2_t6.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k3_t2.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k3_t3.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k3_t4.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k3_t5.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k3_t6.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k4_t2.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k4_t3.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k4_t4.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k4_t5.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k4_t6.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k5_t2.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k5_t3.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k5_t4.0.jsonl",
+    #     "gpt-3.5-turbo-instruct_k5_t5.0.jsonl",
+    # ]
     file_names = [
-        "gpt-3.5-turbo-instruct_k2_t2.0.jsonl",
-        "gpt-3.5-turbo-instruct_k2_t3.0.jsonl",
-        "gpt-3.5-turbo-instruct_k2_t4.0.jsonl",
-        "gpt-3.5-turbo-instruct_k2_t5.0.jsonl",
-        "gpt-3.5-turbo-instruct_k2_t6.0.jsonl",
-        "gpt-3.5-turbo-instruct_k3_t2.0.jsonl",
-        "gpt-3.5-turbo-instruct_k3_t3.0.jsonl",
-        "gpt-3.5-turbo-instruct_k3_t4.0.jsonl",
-        "gpt-3.5-turbo-instruct_k3_t5.0.jsonl",
-        "gpt-3.5-turbo-instruct_k3_t6.0.jsonl",
-        "gpt-3.5-turbo-instruct_k4_t2.0.jsonl",
-        "gpt-3.5-turbo-instruct_k4_t3.0.jsonl",
-        "gpt-3.5-turbo-instruct_k4_t4.0.jsonl",
-        "gpt-3.5-turbo-instruct_k4_t5.0.jsonl",
-        "gpt-3.5-turbo-instruct_k4_t6.0.jsonl",
-        "gpt-3.5-turbo-instruct_k5_t2.0.jsonl",
-        "gpt-3.5-turbo-instruct_k5_t3.0.jsonl",
-        "gpt-3.5-turbo-instruct_k5_t4.0.jsonl",
-        "gpt-3.5-turbo-instruct_k5_t5.0.jsonl",
+        "gpt-3.5-turbo-instruct_k5_t6.0.jsonl",
+        "gpt-3.5-turbo-instruct_k6_t2.0.jsonl",
+        "gpt-3.5-turbo-instruct_k6_t3.0.jsonl",
+        "gpt-3.5-turbo-instruct_k6_t4.0.jsonl",
+        "gpt-3.5-turbo-instruct_k6_t5.0.jsonl",
+        "gpt-3.5-turbo-instruct_k6_t6.0.jsonl",
     ]
     samples_collection = load_qa_results(file_names, base_path)
 
