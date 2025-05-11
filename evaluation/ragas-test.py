@@ -1,3 +1,4 @@
+import argparse
 import json
 import re
 from ragas import SingleTurnSample, EvaluationDataset
@@ -59,7 +60,7 @@ def split_documents(contexts):
     
     return documents
 
-def load_qa_results(qa_results_paths):
+def load_qa_results(qa_results_paths, base_path):
     """
     Load the QA pairs from the specified JSONL files.
     Each file is expected to contain a list of dictionaries with keys:
@@ -71,11 +72,11 @@ def load_qa_results(qa_results_paths):
 
     samples_collection = {}
     for path in qa_results_paths:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(f"{base_path}/{path}", "r", encoding="utf-8") as f:
             samples = {}
             count = 0
             for line in f:
-                # if count > 3: break;
+                if count > 3: break;
                 data = json.loads(line.strip())
 
                 # Null control: Ensure required keys exist and are not None
@@ -118,7 +119,7 @@ def load_qa_results(qa_results_paths):
     answer_accuracy:
         The AnswerAccuracy object
     """
-async def eval_answer_accuracy(dataset) -> tuple:
+async def eval_answer_accuracy(dataset, llm) -> tuple:
     answerAccuracy = AnswerAccuracy(llm=llm) 
     # factualCorrectness = FactualCorrectness(llm=llm)
     scores = []
@@ -151,16 +152,60 @@ def extract_file_name(path: str) -> str:
 
 
 
+def main():
+    model_name = args.model_name
+    llm = LangchainLLMWrapper(OllamaLLM(model=model_name))
+
+    base_path = "results/all-k-done"
+    file_names = [
+        "gpt-3.5-turbo-instruct_k2_t2.0.jsonl",
+        "gpt-3.5-turbo-instruct_k2_t3.0.jsonl",
+        "gpt-3.5-turbo-instruct_k2_t4.0.jsonl",
+        "gpt-3.5-turbo-instruct_k2_t5.0.jsonl",
+        "gpt-3.5-turbo-instruct_k2_t6.0.jsonl",
+        "gpt-3.5-turbo-instruct_k3_t2.0.jsonl",
+        "gpt-3.5-turbo-instruct_k3_t3.0.jsonl",
+        "gpt-3.5-turbo-instruct_k3_t4.0.jsonl",
+        "gpt-3.5-turbo-instruct_k3_t5.0.jsonl",
+        "gpt-3.5-turbo-instruct_k3_t6.0.jsonl",
+        "gpt-3.5-turbo-instruct_k4_t2.0.jsonl",
+        "gpt-3.5-turbo-instruct_k4_t3.0.jsonl",
+        "gpt-3.5-turbo-instruct_k4_t4.0.jsonl",
+        "gpt-3.5-turbo-instruct_k4_t5.0.jsonl",
+        "gpt-3.5-turbo-instruct_k4_t6.0.jsonl",
+        "gpt-3.5-turbo-instruct_k5_t2.0.jsonl",
+        "gpt-3.5-turbo-instruct_k5_t3.0.jsonl",
+        "gpt-3.5-turbo-instruct_k5_t4.0.jsonl",
+        "gpt-3.5-turbo-instruct_k5_t5.0.jsonl",
+    ]
+    samples_collection = load_qa_results(file_names, base_path)
+
+    for sample_name in samples_collection.keys():
+        samples = samples_collection[sample_name]
+        result, errors = asyncio.run(eval_answer_accuracy(samples, llm))
+
+        # Ensure the directory exists
+        output_dir = f"results/evaluations/ragas-runpod-{model_name}_all-k_amd"
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Save Results to csv
+        df_results = pd.DataFrame(result)
+        df_results.to_csv(f"{output_dir}/{sample_name}_AA.csv", index=False)
+        print(f"Results for {sample_name} saved to CSV.")
+
+        # Save Errors to csv
+        df_errors = pd.DataFrame(errors)
+        df_errors.to_csv(f"{output_dir}/{sample_name}_AA_errors.csv", index=False)
+        print(f"Errors for {sample_name} saved to CSV.")
+
 if __name__ == "__main__":
     # Get LLM model from command line argument
 
-    if len(sys.argv) < 2:
-        print("Usage: python ragas-test.py <model_name>")
-        sys.exit(1)
-    model_name = sys.argv[1]
-    print(f"Using model: {model_name}")
+    parser = argparse.ArgumentParser(description="Evaluate RAGAS on a given model.")
+    parser.add_argument("-m", "--model_name", type=str, required=True, help="LLM model name (e.g., mistralai/mixtral-8x22b-instruct-v0.1)")
+    args = parser.parse_args()
 
-    llm = LangchainLLMWrapper(OllamaLLM(model=model_name))
+    main()
     # llm = LangchainLLMWrapper(ChatOpenAI(
     #     model="gpt-3.5-turbo-instruct",
     #     organization=OPENAI_ORG_ID,
@@ -174,29 +219,3 @@ if __name__ == "__main__":
     #     "results/gemma3:27b-it-q8_0_k3.jsonl",
     #     "results/gemma3:12b-it-q8_0_k3.jsonl",
     # ]
-    openai_results_paths = [
-        "results/batch_gpt-4.1-2025-04-14_results.jsonl",
-        "results/batch_gpt-4o-2024-11-20_results.jsonl",
-        "results/gemini-2.5-pro-preview-05-06.jsonl"
-    ]
-    samples_collection = load_qa_results(openai_results_paths)
-
-
-
-    for sample_name in samples_collection.keys():
-        samples = samples_collection[sample_name]
-        result, errors = asyncio.run(eval_answer_accuracy(samples))
-
-        # Ensure the directory exists
-        output_dir = f"results/evaluations/ragas-runpod-{model_name}_amd"
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Save Results to csv
-        df_results = pd.DataFrame(result)
-        df_results.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_FC.csv", index=False)
-        print(f"Results for {sample_name} saved to CSV.")
-
-        # Save Errors to csv
-        df_errors = pd.DataFrame(errors)
-        df_errors.to_csv(f"{output_dir}/{extract_file_name(sample_name)}_FC_errors.csv", index=False)
-        print(f"Errors for {sample_name} saved to CSV.")
