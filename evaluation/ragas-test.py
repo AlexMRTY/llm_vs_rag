@@ -76,7 +76,7 @@ def load_qa_results(qa_results_paths, base_path):
             samples = {}
             count = 0
             for line in f:
-                if count > 3: break;
+                # if count > 3: break;
                 data = json.loads(line.strip())
 
                 # Null control: Ensure required keys exist and are not None
